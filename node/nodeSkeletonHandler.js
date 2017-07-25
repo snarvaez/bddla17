@@ -2,8 +2,7 @@
 const MongoClient = require('mongodb').MongoClient;
 
 // Atlas connection outside of Lambda handler
-//const atlasUri = 'YOUR_ATLAS_CONNECTION_STRING_HERE'; // to-do read from AWS keys
-const atlasUri = 'mongodb://nick:ni05pa904427*@free-shard-00-00-zftrn.mongodb.net:27017,free-shard-00-01-zftrn.mongodb.net:27017,free-shard-00-02-zftrn.mongodb.net:27017/todos?ssl=true&replicaSet=FREE-shard-0&authSource=admin'; // to-do read from AWS keys
+const atlasUri = 'YOUR_ATLAS_CONNECTION_STRING_HERE'; // Set as ENV (e.g. process.env.ATLAS_CONNECTION_STRING)
 
 // Cache DB connection for future use
 let cachedDb;
@@ -28,7 +27,7 @@ exports.handler = (evt, ctx, cb) => {
 
     try {
 
-        if (!cachedDb) {
+        if (!cachedDb || !cachedDb.serverConfig.isConnected()) {
 
             console.log(`=== CONNECTING TO MONGODB ATLAS ===`);
 
