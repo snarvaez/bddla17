@@ -1,1 +1,1 @@
-lambda-local -l nodeSkeletonHandler.js -h handler -e ./event.json -E {\"MONGODB_ATLAS_CLUSTER_URI\":\"mongodb://$USER:$PASSWORD@$ATLAS_SHARD_NAME:27017\,$ATLAS_SHARD_NAME:27017\,$ATLAS_SHARD_NAME:27017/$DATABASE?ssl=true\&replicaSet=$ATLAS_SHARD_NAME\&authSource=admin\"}
+lambda-local -l passthroughQueryHandler.js -h handler -e ./event.json -E {\"MONGODB_ATLAS_CLUSTER_URI\":\"mongodb://$USER:$PASSWORD@$ATLAS_SHARD_NAME:27017\,$ATLAS_SHARD_NAME:27017\,$ATLAS_SHARD_NAME:27017/$DATABASE?ssl=true\&replicaSet=$ATLAS_SHARD_NAME\&authSource=admin\"}
