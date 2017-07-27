@@ -1,3 +1,7 @@
 {
-	"event": "data"
+	"collection": "Customers",
+	"query": {},
+	"options": {
+		"limit": 100
+	}
 }

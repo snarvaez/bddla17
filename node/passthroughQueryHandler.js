@@ -4,9 +4,20 @@ var assert = require('assert');
 var ObjectId = require('mongodb').ObjectID;
 
 // Atlas connection outside of Lambda handler
-const atlas_uri = ">>> Atlas conn string here <<<"; // to-do read from AWS keys
+const atlas_uri = process.env['MONGODB_ATLAS_CLUSTER_URI'];
 
 let cachedDb = null;
+
+/*
+event json - see https://mongodb.github.io/node-mongodb-native/markdown-docs/queries.html
+{
+	"collection": "COLLECTION_NAME",
+	"query": {},
+	"options": {
+		"limit": n
+	}
+}
+*/
 
 exports.handler = (event, context, callback) => {
     // Set to false to allow re-use of database connections across lambda calls
@@ -16,7 +27,7 @@ exports.handler = (event, context, callback) => {
     try {
         if (cachedDb && cachedDb.serverConfig.isConnected()) {
             //Execute Query
-            executeQuery(cachedDb, {}, callback);
+            executeQuery(cachedDb, event.collection, event.query, event.options, callback);
         }
         else {
             console.log("=== CONNECTING TO MONGODB ATLAS ==="); // Log to CloudWatch
@@ -27,7 +38,7 @@ exports.handler = (event, context, callback) => {
                 }
                 cachedDb = db;
                 //Execute Query
-                executeQuery(cachedDb, {}, callback);
+                executeQuery(cachedDb, event.collection, event.query, event.options, callback);
             });
         }
     }
@@ -37,11 +48,12 @@ exports.handler = (event, context, callback) => {
     }
 }
 
-function executeQuery(db, jsonCriteria, callback) {
-  var collection = db.collection('MyColl');
+function executeQuery(db, collection, query, options, callback) {
+  var collection = db.collection(collection);
   // Find some documents
-  collection.find(jsonCriteria).toArray(function(err, docs) {
+  collection.find(query, options).toArray(function(err, docs) {
     assert.equal(err, null);
+    console.log("Found " + docs.length + " docs");
     callback(null, docs);
   });
 }
