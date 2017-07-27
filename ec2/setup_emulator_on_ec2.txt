@@ -1,0 +1,16 @@
+sudo yum update
+sudo yum install git
+
+sudo yum install nodejs npm --enablerepo=epel
+sudo npm install -g lambda-local
+
+sudo pip install python-lambda-local
+
+echo "[mongodb-org-3.4]
+name=MongoDB Repository
+baseurl=https://repo.mongodb.org/yum/amazon/2013.03/mongodb-org/3.4/x86_64/
+gpgcheck=1
+enabled=1
+gpgkey=https://www.mongodb.org/static/pgp/server-3.4.asc" | sudo tee /etc/yum.repos.d/mongodb.repo
+
+sudo yum install -y mongodb-org
