@@ -1,28 +1,21 @@
-// Module dependencies
 const MongoClient = require('mongodb').MongoClient;
-
-// Atlas connection outside of Lambda handler
 const atlasUri = process.env['MONGODB_ATLAS_CLUSTER_URI'];
+const COLLNAME = "Customers";
 
-// Cache DB connection for future use
 let cachedDb;
 
-// AWS event handler
-exports.handler = (evt, ctx, cb) => {
+exports.GET_handler = (evt, ctx, cb) => {
 
     // Set to false to allow re-use of database connections across lambda calls
     // See http://docs.aws.amazon.com/lambda/latest/dg/nodejs-prog-model-context.html
     ctx.callbackWaitsForEmptyEventLoop = false;
 
-    // Executes query
-    function executeQuery(db, coll, query, options, cb) {
+    var query = {}
+    if ("id" in evt)
+      query.id = ObjectID.createFromHexString(event.id);
 
-        // Find documents in tasks collection
-        db.collection(coll).find(query, options).toArray(function(err, docs) {
-            if (err) process.exit(1);
-            cb(null, docs);
-        });
-
+    var options = {
+      limit: 50
     }
 
     try {
@@ -38,20 +31,25 @@ exports.handler = (evt, ctx, cb) => {
                     process.exit(1);
                 }
 
-                // Assign db connection to variable for further use
                 cachedDb = db;
 
-                // Execute query
-                executeQuery(cachedDb, evt.collection, evt.query, evt.options, cb);
+                executeQuery(cachedDb, COLLNAME, query, options, cb);
 
             });
 
         } else {
-            executeQuery(cachedDb, evt.collection, evt.query, evt.options, cb);
+            executeQuery(cachedDb, COLLNAME, query, options, cb);
         }
 
     } catch (err) {
         console.error(`An error occurred! ${err}`);
     }
 
+}
+
+function executeQuery(db, collName, query, options, cb) {
+    db.collection(collName).find(query, options).toArray(function(err, docs) {
+        if (err) process.exit(1);
+        cb(null, docs);
+    });
 }
