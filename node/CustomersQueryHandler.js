@@ -1,57 +1,106 @@
-// Module dependencies
 const MongoClient = require('mongodb').MongoClient;
-
-// Atlas connection outside of Lambda handler
+const ObjectID = require('mongodb').ObjectID;
 const atlasUri = process.env['MONGODB_ATLAS_CLUSTER_URI'];
 
-// Cache DB connection for future use
+const COLLNAME = 'Customers';
+
 let cachedDb;
 
-// AWS event handler
-exports.handler = (evt, ctx, cb) => {
+exports.GET_handler = (evt, ctx, cb) => {
 
-    // Set to false to allow re-use of database connections across lambda calls
-    // See http://docs.aws.amazon.com/lambda/latest/dg/nodejs-prog-model-context.html
-    ctx.callbackWaitsForEmptyEventLoop = false;
+  // Set to false to allow re-use of database connections across lambda calls
+  // See http://docs.aws.amazon.com/lambda/latest/dg/nodejs-prog-model-context.html
+  ctx.callbackWaitsForEmptyEventLoop = false;
 
-    // Executes query
-    function executeQuery(db, coll, query, options, cb) {
+  var options = { limit: 50 }; // to-do paging
 
-        // Find documents in tasks collection
-        db.collection(coll).find(query, options).toArray(function(err, docs) {
-            if (err) process.exit(1);
-            cb(null, docs);
-        });
+  var query = {};
+  if ('id' in evt) {
+    query._id = ObjectID.createFromHexString(evt.id);
+  }
 
+  executeQuery(cachedDb, COLLNAME, query, options, cb);
+};
+
+exports.GET_Renewals_handler = (evt, ctx, cb) => {
+
+  // Set to false to allow re-use of database connections across lambda calls
+  // See http://docs.aws.amazon.com/lambda/latest/dg/nodejs-prog-model-context.html
+  ctx.callbackWaitsForEmptyEventLoop = false;
+
+  var options = { limit: 50 }; // to-do paging
+
+  var query = {};
+
+  if ('policyType' in evt) {
+    query['policies.policyType'] = evt.policyType;
+  }
+
+  if ('expiresInDays' in evt) {
+
+    var startDt = new Date();
+    var endDt = new Date(startDt.getTime() + (evt.expiresInDays * 24 * 60 * 60 * 1000));
+
+    query['policies.nextRenewalDt'] = { '$gte': startDt, '$lte': endDt };
+  }
+
+  if (('locLat' in evt) && ('locLon' in evt) && ('mileRadius' in evt)) {
+
+    var lon = evt.locLon;
+    var lat = evt.locLat;
+    var radius = evt.mileRadius / 3959; // to radians
+
+    var geoQuery = { "$geoWithin" : { "$centerSphere" : [[lat,lon],radius] }};
+
+    if ('policyType' in evt) {
+      switch (evt.policyType) {
+
+        case 'home':
+          query['policies.address.location'] = geoQuery;
+          break;
+
+        case 'auto':
+          query['address.location'] = geoQuery;
+          break;
+      }
     }
+  }
 
-    try {
+  executeQuery(cachedDb, COLLNAME, query, options, cb);
+};
 
-        if (!cachedDb || !cachedDb.serverConfig.isConnected()) {
+function executeQuery(db, collName, query, options, cb) {
 
-            console.log(`=== CONNECTING TO MONGODB ATLAS ===`);
+  function execute(db, collName, query, options, cb) {
 
-            MongoClient.connect(atlasUri, (err, db) => {
+    console.log('QUERY on ' + collName + ': ' + JSON.stringify(query));
 
-                if (err) {
-                    console.error(`An error occurred! ${err}`);
-                    process.exit(1);
-                }
+    db.collection(collName).find(query, options).toArray(function(err, docs) {
+        if (err) process.exit(1);
 
-                // Assign db connection to variable for further use
-                cachedDb = db;
+        console.log('FOUND ' + docs.length + ' documents.');
 
-                // Execute query
-                executeQuery(cachedDb, evt.collection, evt.query, evt.options, cb);
+        cb(null, docs);
+    });
+  }
 
-            });
+  try {
+      if (!cachedDb || !cachedDb.serverConfig.isConnected()) {
 
-        } else {
-            executeQuery(cachedDb, evt.collection, evt.query, evt.options, cb);
-        }
+          console.log('=== CONNECTING TO MONGODB ATLAS ===');
 
-    } catch (err) {
-        console.error(`An error occurred! ${err}`);
-    }
-
+          MongoClient.connect(atlasUri, (err, db) => {
+              if (err) {
+                  console.error(`An error occurred! ${err}`);
+                  process.exit(1);
+              }
+              cachedDb = db;
+              execute(cachedDb, collName, query, options, cb);
+          });
+      } else {
+          execute(cachedDb, collName, query, options, cb);
+      }
+  } catch (err) {
+      console.error(`An error occurred! ${err}`);
+  }
 }
