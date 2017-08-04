@@ -58,7 +58,17 @@ Resources:
       MemorySize: 1024
       Role: !GetAtt LambdaExecutionRole.Arn
       Runtime: nodejs6.10
-      Timeout: 30
+      Timeout: 60
+      Environment:
+        Variables:
+          MONGODB_ATLAS_CLUSTER_URI: >>>YOUR ATLAS CLUSTER CONNECTION <<<
+      VpcConfig:
+        SecurityGroupIds:
+          - >>> YOUR VPC THAT IS PEERED WITH ATLAS <<<
+        SubnetIds:
+          - >>> YOUR SUBNET 1 <<<
+          - >>> YOUR SUBNET 2 <<<
+          - >>> YOUR SUBNET 3 <<<
       Events:
         ProxyApiRoot:
           Type: Api
